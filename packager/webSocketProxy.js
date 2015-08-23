@@ -10,12 +10,13 @@
 
 var WebSocketServer = require('ws').Server;
 
+var clients = [];
+
 function attachToServer(server, path) {
   var wss = new WebSocketServer({
     server: server,
     path: path
   });
-  var clients = [];
 
   wss.on('connection', function(ws) {
     clients.push(ws);
@@ -45,6 +46,12 @@ function attachToServer(server, path) {
   });
 }
 
+function isDebuggerConnected() {
+  // Debugger is connected if the app and at least one browser are connected
+  return clients.length >= 2;
+}
+
 module.exports = {
-  attachToServer: attachToServer
-};
+  attachToServer: attachToServer,
+  isDebuggerConnected: isDebuggerConnected,
+};  

@@ -13,6 +13,7 @@ var path = require('path');
 var execFile = require('child_process').execFile;
 var http = require('http');
 var isAbsolutePath = require('absolute-path');
+var launcher = require('browser-launcher2');
 
 var getFlowTypeCheckMiddleware = require('./getFlowTypeCheckMiddleware');
 
@@ -64,6 +65,9 @@ var options = parseCommandLine([{
   type: 'string',
   default: require.resolve('./transformer.js'),
   description: 'Specify a custom transformer to be used (absolute path)'
+}, {
+  command: 'dangerouslyDisableChromeDebuggerWebSecurity',
+  description: 'Disable the Chrome debugger\'s same-origin policy'
 }]);
 
 if (options.projectRoots) {
@@ -192,17 +196,33 @@ function getDevToolsLauncher(options) {
       res.writeHead(200, {'Content-Type': 'text/html'});
       fs.createReadStream(debuggerPath).pipe(res);
     } else if (req.url === '/launch-chrome-devtools') {
+      if (webSocketProxy.isDebuggerConnected()) {
+        // Dev tools are already open; no need to open another session
+        res.end('OK');
+        return;
+      }
       var debuggerURL = 'http://localhost:' + options.port + '/debugger-ui';
-      var script = 'launchChromeDevTools.applescript';
+      var chromeOptions =
+        options.dangerouslyDisableChromeDebuggerWebSecurity ?
+          ['--disable-web-security'] :
+          [];
       console.log('Launching Dev Tools...');
-      execFile(path.join(__dirname, script), [debuggerURL], function(err, stdout, stderr) {
+      launcher(function(err, launch) {
         if (err) {
-          console.log('Failed to run ' + script, err);
+          console.error('Failed to initialize browser-launcher2', err);
+          next(err);
         }
-        console.log(stdout);
-        console.warn(stderr);
+        launch(debuggerURL, {
+          browser: 'chrome',
+          options: chromeOptions,
+        }, function(err, instance) {
+          if (err) {
+            console.error('Failed to launch chrome', err);
+            next(err);
+          }
+          res.end('OK');
+        });
       });
-      res.end('OK');
     } else {
       next();
     }
