@@ -144,8 +144,6 @@ RCT_EXPORT_METHOD(getPhotos:(NSDictionary *)params
                                     @"latitude": @(loc.coordinate.latitude),
                                     @"longitude": @(loc.coordinate.longitude),
                                     @"altitude": @(loc.altitude),
-                                    @"heading": @(loc.course),
-                                    @"speed": @(loc.speed),
                                     } : @{},
                                   }
                               }];
